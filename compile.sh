@@ -1,1 +1,1 @@
-g++ -std=c++11 src/driver.cpp src/Shop.cpp -o bin/sleepingBarbers -lpthread
+g++ -std=c++20 src/driver.cpp src/Shop.cpp -o sleepingBarbers -lpthread

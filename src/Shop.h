@@ -1,57 +1,62 @@
 #ifndef _SHOP_H_
 #define _SHOP_H_
-#include <pthread.h> // the header file for the pthread library
-#include <queue> // the STL library: queue
-#include <map>
+#include <pthread.h>  // the header file for the pthread library
+
+#include <condition_variable>
 #include <iostream>
-using namespace std;
-#define DEFAULT_CHAIRS 3 // the default number of chairs for waiting = 3
-#define DEFAULT_BARBERS 1 // the default number of barbers = 1
+#include <map>
+#include <mutex>
+#include <queue>  // the STL library: queue
+
+#define DEFAULT_CHAIRS 3   // the default number of chairs for waiting = 3
+#define DEFAULT_BARBERS 1  // the default number of barbers = 1
 
 class Shop {
-public:
-    Shop( int nBarbers, int nChairs );
-    Shop( ); 
-    int visitShop( int customerId ); // return a non-negative number only when a customer got a service
-    
-    void leaveShop( int customerId, int barberId );
-    void helloCustomer( int barberId );
-    
-    void byeCustomer( int barberId );
+ public:
+  bool closed;
+  Shop(int nBarbers, int nChairs);
+  Shop();
+  int visitShop(int customerId);  // return a non-negative number only when a
+                                  // customer got a service
 
-    int nDropsOff = 0; // the number of customers dropped off
+  void leaveShop(int customerId, int barberId);
+  void helloCustomer(int barberId);
 
-private:
-    int nBarbers;
-    int nChairs;
+  void byeCustomer(int barberId);
 
-    enum customerState {WAIT, CHAIR, LEAVING};
+  int nDropsOff = 0;  // the number of customers dropped off
 
-    struct Barber {
+  void CloseShop();
 
-        int id;
-        pthread_cond_t barberCond;
-        int myCustomer = -1; //no customer by default
-    };
+ private:
+  int nBarbers;
+  int nChairs;
 
-    struct Customer {
-        int id;
-        pthread_cond_t customerCond;
-        customerState state = WAIT; //waiting state by default
-        int myBarber = -1; //no barber by default
-    };
+  enum customerState { WAIT, CHAIR, LEAVING };
 
+  struct Barber {
+    int id;
+    std::condition_variable barberCond;
+    int myCustomer = -1;  // no customer by default
+  };
 
-    Barber *barbers; //array of barber objects
-    map<int, Customer> customers; //container for customer objects
+  struct Customer {
+    int id;
+    std::condition_variable customerCond;
+    customerState state = WAIT;  // waiting state by default
+    int myBarber = -1;           // no barber by default
+  };
 
+  Barber* barbers;                    // array of barber objects
+  std::map<int, Customer> customers;  // container for customer objects
 
-    queue<int> waitingCustomers;
-    queue<int> sleepingBarbers;
+  std::queue<int> waitingCustomers;
+  std::queue<int> sleepingBarbers;
 
-    pthread_mutex_t mutex1;
+  std::mutex mutex1;
+  std::unique_lock<std::mutex> locker{mutex1};
 
-    Barber* getBarber(int barberId);
+  Barber* getBarber(int barberId);
 };
 
 #endif
