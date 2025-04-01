@@ -36,15 +36,15 @@ class Shop {
 
   struct Barber {
     int id;
-    std::condition_variable barberCond;
+    std::condition_variable_any barberCond;
     int myCustomer = -1;  // no customer by default
   };
 
   struct Customer {
-    int id;
-    std::condition_variable customerCond;
-    customerState state = WAIT;  // waiting state by default
-    int myBarber = -1;           // no barber by default
+    int id = 0;
+    std::condition_variable_any customerCond;
+    customerState state = customerState::WAIT;  // waiting state by default
+    int myBarber = -1;                          // no barber by default
   };
 
   Barber* barbers;                    // array of barber objects
@@ -54,7 +54,6 @@ class Shop {
   std::queue<int> sleepingBarbers;
 
   std::mutex mutex1;
-  std::unique_lock<std::mutex> locker{mutex1};
 
   Barber* getBarber(int barberId);
 };

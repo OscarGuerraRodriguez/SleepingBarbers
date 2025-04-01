@@ -49,10 +49,12 @@ int Shop::visitShop(int customerId)  // return a non-negative number only when a
         "customer[%i]]: takes a waiting chair. # waiting seats available = %i "
         "\n",
         customerId, (int)(nChairs - waitingCustomers.size()));
-
     while (customers[customerId].myBarber == -1) {
-      customers[customerId].customerCond.wait(locker);
-      if (closed) return -1;
+      customers[customerId].customerCond.wait(mutex1);
+      if (closed) {
+        return -1;
+        mutex1.unlock();
+      }
     }
     barberId = customers[customerId].myBarber;
   } else {  // there are sleeping barbers in a queue
@@ -79,7 +81,11 @@ void Shop::leaveShop(int customerId, int barberId) {
          customerId, barberId);
 
   while (customers[customerId].myBarber != -1) {
-    customers[customerId].customerCond.wait(locker);
+    customers[customerId].customerCond.wait(mutex1);
+    if (closed) {
+      mutex1.unlock();
+      return;
+    }
   }
 
   printf("customer[%i]: says good-bye to barber[%i]\n", customerId, barberId);
@@ -91,20 +97,31 @@ void Shop::leaveShop(int customerId, int barberId) {
 }
 
 void Shop::helloCustomer(int barberId) {
-  mutex1.unlock();
-
+  mutex1.lock();
+  if (closed) {
+    mutex1.unlock();
+    return;
+  }
   if (getBarber(barberId)->myCustomer == -1) {
     printf("barber  [%i]: sleeps because of no customers.\n", barberId);
     sleepingBarbers.push(barberId);
     while (getBarber(barberId)->myCustomer == -1) {
-      getBarber(barberId)->barberCond.wait(locker);
+      getBarber(barberId)->barberCond.wait(mutex1);
+      if (closed) {
+        mutex1.unlock();
+        return;
+      }
     }
   }
 
   while (customers[getBarber(barberId)->myCustomer].state !=
          CHAIR)  // synchronization with customer thread
   {
-    getBarber(barberId)->barberCond.wait(locker);
+    getBarber(barberId)->barberCond.wait(mutex1);
+    if (closed) {
+      mutex1.unlock();
+      return;
+    }
   }
 
   printf("barber  [%i]: starts a hair-cut service for customer[%i]\n", barberId,
@@ -115,6 +132,10 @@ void Shop::helloCustomer(int barberId) {
 
 void Shop::byeCustomer(int barberId) {
   mutex1.lock();
+  if (closed) {
+    mutex1.unlock();
+    return;
+  }
   printf(
       "barber  [%i]: says he's done with a hair-cut service for customer[%i]\n",
       barberId, getBarber(barberId)->myCustomer);
@@ -124,7 +145,11 @@ void Shop::byeCustomer(int barberId) {
   while (customers[getBarber(barberId)->myCustomer].state !=
          LEAVING)  // synchronization with customer thread
   {
-    getBarber(barberId)->barberCond.wait(locker);
+    getBarber(barberId)->barberCond.wait(mutex1);
+    if (closed) {
+      mutex1.unlock();
+      return;
+    }
   }
   getBarber(barberId)->myCustomer = -1;
 
@@ -154,7 +179,7 @@ void Shop::CloseShop() {
   for (int i = 0; i < nBarbers; i++) {
     barbers[i].barberCond.notify_one();
   }
-  for (auto customer : customers) {
-    customer.second.customerCond.notify_one();
+  for (int i{0}; i < customers.size(); ++i) {
+    customers[i].customerCond.notify_one();
   }
 }

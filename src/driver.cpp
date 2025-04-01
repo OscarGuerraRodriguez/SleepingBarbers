@@ -48,13 +48,12 @@ int main(int argc, char *argv[]) {
     ThreadParam *param = new ThreadParam(&shop, i + 1, 0);
     customer_threads[i] = std::jthread{customer, param};
   }
-  for (int i = 0; i < nCustomers;
-       i++)  // wait until all the customers are served
-    customer_threads[i].join();
+  std::cout << "# test\n";
+  for (int i = 0; i < nCustomers; i++) customer_threads[i].join();
+  std::cout << "# no more customers\n";
   shop.CloseShop();
-  for (int i = 0; i < nCustomers;
-       i++)  // wait until all the customers are served
-    customer_threads[i].join();
+  for (int i = 0; i < nBarbers; i++)  // wait until all the customers are served
+    barber_thread[i].join();
 
   std::cout << "# customers who didn't receive a service = " << shop.nDropsOff
             << std::endl;
